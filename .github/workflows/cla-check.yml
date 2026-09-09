@@ -6,6 +6,7 @@ on:
 
 permissions:
   statuses: write
+  pull-requests: write
 
 jobs:
   check-cla:
@@ -18,9 +19,11 @@ jobs:
         with:
           script: |
             const CLA_VERSION = '1.0-placeholder';
+            const MARKER = '<!-- cla-check -->';
             const author = context.payload.pull_request.user.login;
             const headSha = context.payload.pull_request.head.sha;
-            const signUrl = `https://trailblazerlabs.salesforce.com/cla/?repo=${context.repo.owner}/${context.repo.repo}&pr=${context.payload.pull_request.number}`;
+            const prNumber = context.payload.pull_request.number;
+            const signUrl = `https://trailblazerlabs.salesforce.com/cla/?repo=${context.repo.owner}/${context.repo.repo}&pr=${prNumber}`;
 
             const res = await fetch(
               'https://api.github.com/repos/TrailblazerLabs/cla-signatures/contents/signatures.json',
@@ -52,3 +55,29 @@ jobs:
                 : `@${author} needs to sign the CLA before this PR can be merged`,
               target_url: signUrl,
             });
+
+            const body = signed
+              ? `${MARKER}\n Thanks @${author} — your Trailblazer Labs CLA signature is on file. This pull request is cleared to merge.`
+              : `${MARKER}\n Thanks for your contribution, @${author}! Before this pull request can be merged, you need to sign the Trailblazer Labs Contributor License Agreement.\n\n**[Sign the CLA here](${signUrl})**\n\nYou only need to sign once — it covers every Trailblazer Labs repository. After signing, push a new commit or re-run the check and this status will update automatically.`;
+
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+            const existing = comments.data.find((c) => (c.body || '').includes(MARKER));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body,
+              });
+            }
