@@ -1,0 +1,54 @@
+name: CLA Check
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  statuses: write
+
+jobs:
+  check-cla:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check signatures.json for PR author
+        uses: actions/github-script@v7
+        env:
+          CLA_READ_TOKEN: ${{ secrets.CLA_READ_TOKEN }}
+        with:
+          script: |
+            const CLA_VERSION = '1.0-placeholder';
+            const author = context.payload.pull_request.user.login;
+            const headSha = context.payload.pull_request.head.sha;
+            const signUrl = `https://trailblazerlabs.salesforce.com/cla/?repo=${context.repo.owner}/${context.repo.repo}&pr=${context.payload.pull_request.number}`;
+
+            const res = await fetch(
+              'https://api.github.com/repos/TrailblazerLabs/cla-signatures/contents/signatures.json',
+              {
+                headers: {
+                  Authorization: `Bearer ${process.env.CLA_READ_TOKEN}`,
+                  Accept: 'application/vnd.github.raw',
+                  'User-Agent': 'cla-check-workflow',
+                },
+              }
+            );
+            if (!res.ok) {
+              core.setFailed(`Could not read signatures.json: ${res.status}`);
+              return;
+            }
+            const data = await res.json();
+            const signed = (data.signatures || []).some(
+              (s) => (s.login || '').toLowerCase() === author.toLowerCase() && s.claVersion === CLA_VERSION
+            );
+
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: headSha,
+              state: signed ? 'success' : 'failure',
+              context: 'cla/signed',
+              description: signed
+                ? `@${author} has signed the CLA`
+                : `@${author} needs to sign the CLA before this PR can be merged`,
+              target_url: signUrl,
+            });
