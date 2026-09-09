@@ -1,4 +1,4 @@
-# Cohort-Repo-Template
+# Test TBL CLA Signed Cohort-Repo-Template
 This is the core structure of Trailblazer Labs repos
 # [Project Name]
 
