@@ -1,5 +1,5 @@
-# Cohort-Repo-Template
-This is the core structure of Trailblazer Labs repos
+# TBLTest
+This is the core structure of Trailblazer Labs repos - testing the CLA on code contribution
 # [Project Name]
 
 ![Project Banner](./assets/banner.png)
