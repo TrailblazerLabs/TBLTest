@@ -18,7 +18,7 @@ jobs:
           CLA_READ_TOKEN: ${{ secrets.CLA_READ_TOKEN }}
         with:
           script: |
-            const CLA_VERSION = '1.0-placeholder';
+            const CLA_VERSION = '1.0';
             const MARKER = '<!-- cla-check -->';
             const author = context.payload.pull_request.user.login;
             const headSha = context.payload.pull_request.head.sha;
